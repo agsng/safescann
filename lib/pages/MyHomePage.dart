@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../model/profile.dart';
 import 'auth_provider.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
+
   final String title;
 
   @override
@@ -11,38 +13,32 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  Future<void> _logout() async {
-    try {
-      await Provider.of<AuthProvider>(context, listen: false).logout();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Logout failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
+          // Profile Button
+          IconButton(
+            icon: const Icon(Icons.account_circle), // A common icon for profiles
+            onPressed: () {
+              // Navigate to the ProfilePage when the button is pressed
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              );
+            },
+          ),
+          // Logout Button (existing)
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Logout',
+            onPressed: () async {
+              await auth.logout();
+            },
           ),
         ],
       ),
@@ -50,18 +46,25 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text('You have pushed the button this many times:'),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Welcome, ${auth.user?.email ?? 'Guest'}!',
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
+            const SizedBox(height: 20),
+            // The existing "View/Edit Profile" button can be kept or removed if the AppBar button is sufficient
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to the ProfilePage
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                );
+              },
+              child: const Text('View/Edit Profile (or use header button)'),
+            ),
+            // Add other dashboard content here
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }

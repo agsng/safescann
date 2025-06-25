@@ -5,6 +5,7 @@ import 'package:safescann/pages/MyHomePage.dart';
 import 'package:safescann/pages/auth_provider.dart';
 import 'package:safescann/pages/login_page.dart';
 import 'package:safescann/pages/register_page.dart';
+import 'package:safescann/provider/profile_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +13,6 @@ void main() async {
   // Error boundary for Flutter framework errors
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    // You could also log this to Crashlytics or similar
     debugPrint(details.exceptionAsString());
   };
 
@@ -44,8 +44,22 @@ void main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => AuthProvider()..initialize(), // Now correctly calls initialize()
+    MultiProvider( // Use MultiProvider for multiple ChangeNotifierProviders
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => AuthProvider()..initialize(),
+        ),
+        // ChangeNotifierProxyProvider is used when a provider depends on another provider
+        ChangeNotifierProxyProvider<AuthProvider, ProfileManager>(
+          create: (context) => ProfileManager(authProvider: Provider.of<AuthProvider>(context, listen: false)),
+          update: (context, auth, previousProfileManager) {
+            // Return a new ProfileManager if AuthProvider changes.
+            // Re-creating the ProfileManager here ensures it always has the latest AuthProvider instance.
+            // The ProfileManager has a listener to AuthProvider, so it will handle fetching the profile itself.
+            return ProfileManager(authProvider: auth);
+          },
+        ),
+      ],
       child: const SafeScannApp(),
     ),
   );
@@ -121,6 +135,7 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
 
+    // Wait for Firebase to emit auth state
     if (auth.isLoading) {
       return const AppSplashScreen();
     }
@@ -130,7 +145,6 @@ class AuthWrapper extends StatelessWidget {
         : const LoginPage();
   }
 }
-
 class AppSplashScreen extends StatelessWidget {
   const AppSplashScreen({super.key});
 
