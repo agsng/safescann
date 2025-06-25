@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "220626158058",
+    "project_id": "safescann-aa466",
+    "storage_bucket": "safescann-aa466.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:220626158058:android:5b51118351cbd7eb433293",
+        "android_client_info": {
+          "package_name": "com.example.safescann"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSEFjpARjtSmNv76nmdgLYfXmTMQiTv34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
