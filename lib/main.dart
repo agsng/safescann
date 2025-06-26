@@ -79,7 +79,7 @@ class SafeScannApp extends StatelessWidget {
       home: const AuthWrapper(),
       routes: {
         '/register': (context) => const RegisterPage(),
-        '/home': (context) => const MyHomePage(title: 'Dashboard'),
+        '/home': (context) => const MyHomePage(title: 'SafeScann'),
       },
       navigatorObservers: [
         // Add any navigation observers (e.g., for analytics)

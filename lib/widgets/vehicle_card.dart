@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:safescann/widgets/text_input_field.dart';
 import 'package:safescann/widgets/dropdown_input_field.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 /// A reusable card widget for displaying and editing vehicle information.
 class VehicleCard extends StatelessWidget {
@@ -137,6 +138,14 @@ class VehicleCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget buildVehicleQRCode(String vehicleUUID) {
+    return QrImageView(
+      data: vehicleUUID,
+      version: QrVersions.auto,
+      size: 200.0,
     );
   }
 }
