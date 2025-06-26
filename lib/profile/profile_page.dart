@@ -8,7 +8,11 @@ import '../models/user_profile.dart';
 import '../models/emergency_contact.dart';
 import '../providers/profile_manager.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/section_title.dart';
+import '../widgets/profle_section_title.dart';
+import '../widgets/profile_image_picker.dart';
+import '../widgets/profile_text_field.dart';
+import '../widgets/profile_dropdown.dart';
+import '../widgets/emergency_contact_card.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -272,146 +276,6 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    IconData? icon,
-    bool readOnly = false,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-    VoidCallback? onTap,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          prefixIcon: icon != null ? Icon(icon) : null,
-          filled: !_isEditing,
-          fillColor: Colors.grey[200],
-        ),
-        readOnly: readOnly,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        onTap: onTap,
-        validator: validator,
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required TextEditingController controller,
-    required String label,
-    required List<String> options,
-    IconData? icon,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: DropdownButtonFormField<String>(
-        value: controller.text.isEmpty ? null : controller.text,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          prefixIcon: icon != null ? Icon(icon) : null,
-          filled: !_isEditing,
-          fillColor: Colors.grey[200],
-        ),
-        items: options.map((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        }).toList(),
-        onChanged: _isEditing
-            ? (String? newValue) {
-          if (newValue != null) {
-            controller.text = newValue;
-          }
-        }
-            : null,
-        validator: validator,
-      ),
-    );
-  }
-
-  Widget _buildEmergencyContact(int index) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Emergency Contact ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if (_isEditing)
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      color: _ecNameControllers.length <= 1 ? Colors.grey : Colors.red,
-                    ),
-                    onPressed: _ecNameControllers.length <= 1
-                        ? null
-                        : () => _removeEmergencyContact(index),
-                    tooltip: _ecNameControllers.length <= 1
-                        ? 'At least 1 contacts required'
-                        : 'Remove contact',
-                  ),
-              ],
-            ),
-            _buildTextField(
-              controller: _ecNameControllers[index],
-              label: 'Name',
-              icon: Icons.person,
-              readOnly: !_isEditing,
-              validator: (value) {
-                if (_isEditing && (value == null || value.isEmpty)) {
-                  return 'Name is required';
-                }
-                return null;
-              },
-            ),
-            _buildTextField(
-              controller: _ecRelationshipControllers[index],
-              label: 'Relationship',
-              icon: Icons.people,
-              readOnly: !_isEditing,
-            ),
-            _buildTextField(
-              controller: _ecPhoneControllers[index],
-              label: 'Phone',
-              icon: Icons.phone,
-              readOnly: !_isEditing,
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (_isEditing && (value == null || value.isEmpty)) {
-                  return 'Phone is required';
-                }
-                return null;
-              },
-            ),
-            _buildTextField(
-              controller: _ecEmailControllers[index],
-              label: 'Email',
-              icon: Icons.email,
-              readOnly: !_isEditing,
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileManager = Provider.of<ProfileManager>(context);
@@ -452,35 +316,17 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Column(
             children: [
               Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundImage: _profileImage != null
-                          ? FileImage(_profileImage!)
-                          : const AssetImage('assets/default_avatar.png')
-                      as ImageProvider,
-                      child: _profileImage == null
-                          ? const Icon(Icons.person, size: 60)
-                          : null,
-                    ),
-                    if (_isEditing)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 30),
-                          onPressed: _pickImage,
-                        ),
-                      ),
-                  ],
+                child: ProfileImagePicker(
+                  profileImage: _profileImage,
+                  isEditing: _isEditing,
+                  onPickImage: _pickImage,
                 ),
               ),
               const SizedBox(height: 20),
 
               // Basic Information
               const SectionTitle(title: 'Basic Information'),
-              _buildTextField(
+              ProfileTextField(
                 controller: _fullNameController,
                 label: 'Full Name',
                 icon: Icons.person,
@@ -492,23 +338,24 @@ class _ProfilePageState extends State<ProfilePage> {
                   return null;
                 },
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _dobController,
                 label: 'Date of Birth',
                 icon: Icons.calendar_today,
                 readOnly: true,
                 onTap: _isEditing ? () => _selectDate(context) : null,
               ),
-              _buildDropdown(
+              ProfileDropdown(
                 controller: _genderController,
                 label: 'Gender',
                 options: _genderOptions,
                 icon: Icons.wc,
+                isEditing: _isEditing,
               ),
 
               // Contact Details
               const SectionTitle(title: 'Contact Details'),
-              _buildTextField(
+              ProfileTextField(
                 controller: _emailController,
                 label: 'Email',
                 icon: Icons.email,
@@ -521,7 +368,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   return null;
                 },
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _primaryPhoneController,
                 label: 'Primary Phone',
                 icon: Icons.phone,
@@ -534,7 +381,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   return null;
                 },
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _alternatePhoneController,
                 label: 'Alternate Phone',
                 icon: Icons.phone_android,
@@ -544,8 +391,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // Emergency Contacts
               const SectionTitle(title: 'Emergency Contacts'),
-              ...List.generate(_ecNameControllers.length,
-                      (index) => _buildEmergencyContact(index)),
+              ...List.generate(_ecNameControllers.length, (index) {
+                return EmergencyContactCard(
+                  index: index,
+                  nameController: _ecNameControllers[index],
+                  relationshipController: _ecRelationshipControllers[index],
+                  phoneController: _ecPhoneControllers[index],
+                  emailController: _ecEmailControllers[index],
+                  isEditing: _isEditing,
+                  canDelete: _ecNameControllers.length > 2,
+                  onDelete: () => _removeEmergencyContact(index),
+                );
+              }),
               if (_isEditing)
                 ElevatedButton(
                   onPressed: _addEmergencyContact,
@@ -554,37 +411,39 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // Vehicle Information
               const SectionTitle(title: 'Vehicle Information'),
-              _buildTextField(
+              ProfileTextField(
                 controller: _vehiclePlateController,
                 label: 'License Plate',
                 icon: Icons.directions_car,
                 readOnly: !_isEditing,
               ),
-              _buildDropdown(
+              ProfileDropdown(
                 controller: _vehicleTypeController,
                 label: 'Vehicle Type',
                 options: _vehicleTypeOptions,
                 icon: Icons.directions_car,
+                isEditing: _isEditing,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _vehicleModelController,
                 label: 'Make & Model',
                 icon: Icons.branding_watermark,
                 readOnly: !_isEditing,
               ),
-              _buildDropdown(
+              ProfileDropdown(
                 controller: _vehicleColorController,
                 label: 'Color',
                 options: _vehicleColorOptions,
                 icon: Icons.color_lens,
+                isEditing: _isEditing,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _insuranceProviderController,
                 label: 'Insurance Provider',
                 icon: Icons.medical_services,
                 readOnly: !_isEditing,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _insurancePolicyController,
                 label: 'Policy Number',
                 icon: Icons.note,
@@ -593,27 +452,28 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // Medical Information
               const SectionTitle(title: 'Medical Information'),
-              _buildDropdown(
+              ProfileDropdown(
                 controller: _bloodGroupController,
                 label: 'Blood Group',
                 options: _bloodGroupOptions,
                 icon: Icons.bloodtype,
+                isEditing: _isEditing,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _allergiesController,
                 label: 'Known Allergies',
                 icon: Icons.warning,
                 readOnly: !_isEditing,
                 maxLines: 3,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _conditionsController,
                 label: 'Medical Conditions',
                 icon: Icons.medical_information,
                 readOnly: !_isEditing,
                 maxLines: 3,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _medicationsController,
                 label: 'Current Medications',
                 icon: Icons.medication,
@@ -623,14 +483,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // Location Information
               const SectionTitle(title: 'Location Information'),
-              _buildTextField(
+              ProfileTextField(
                 controller: _homeAddressController,
                 label: 'Home Address',
                 icon: Icons.home,
                 readOnly: !_isEditing,
                 maxLines: 3,
               ),
-              _buildTextField(
+              ProfileTextField(
                 controller: _hospitalController,
                 label: 'Preferred Hospital',
                 icon: Icons.local_hospital,
