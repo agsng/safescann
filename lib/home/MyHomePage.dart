@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../model/profile.dart';
-import 'auth_provider.dart';
+import '../profile/profile_page.dart';
+import '../providers/auth_provider.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -15,7 +15,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = Provider.of<CustomAuthProvider>(context);
 
     return Scaffold(
       appBar: AppBar(

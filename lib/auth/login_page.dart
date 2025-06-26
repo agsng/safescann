@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'auth_provider.dart';
+import '../providers/auth_provider.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,7 +29,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Attempt to log in using the AuthProvider
-      await Provider.of<AuthProvider>(context, listen: false).login(
+      await Provider.of<CustomAuthProvider>(context, listen: false).login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     // Access the AuthProvider to check loading state
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = Provider.of<CustomAuthProvider>(context);
 
     return Scaffold(
       body: Container(
@@ -175,7 +175,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         child: const Text(
                           'Don\'t have an account? Register',
-                          style: TextStyle(fontSize: 16, color: Colors.blue),
+                          style: TextStyle(fontSize: 16, color: Colors.deepPurpleAccent),
                         ),
                       ),
                     ],

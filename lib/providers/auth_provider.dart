@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
-class AuthProvider with ChangeNotifier {
+class CustomAuthProvider with ChangeNotifier {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
@@ -10,11 +10,11 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isEmailVerified = false;
 
-  AuthProvider({
+  CustomAuthProvider({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance; // Removed _setupAuthListener() from constructor
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   // Getters
   User? get user => _user;

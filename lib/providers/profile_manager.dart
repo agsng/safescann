@@ -1,16 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../pages/auth_provider.dart';
-import '../model/profile.dart';
+// Ensure this import path is correct for your CustomAuthProvider
+import '../providers/auth_provider.dart'; // Assuming CustomAuthProvider is in this path
+import '../models/user_profile.dart'; // Import the updated UserProfile model
 
 /// A class to manage user profile data, extending ChangeNotifier for state management.
 /// It interacts with Firebase Firestore to store and retrieve user profiles.
 class ProfileManager with ChangeNotifier {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final AuthProvider _authProvider; // Reference to AuthProvider
+  // Changed type from AuthProvider to CustomAuthProvider
+  final CustomAuthProvider _authProvider; // Reference to CustomAuthProvider
 
   UserProfile? _userProfile; // Stores the currently loaded user profile
   bool _isLoading = false; // Indicates if an operation (fetch/save) is in progress
@@ -20,11 +22,12 @@ class ProfileManager with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   /// Constructor for ProfileManager.
-  /// Takes optional FirebaseAuth, FirebaseFirestore, and required AuthProvider instances.
+  /// Takes optional FirebaseAuth, FirebaseFirestore, and required CustomAuthProvider instances.
   ProfileManager({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    required AuthProvider authProvider,
+    // Changed type from AuthProvider to CustomAuthProvider
+    required CustomAuthProvider authProvider,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
         _authProvider = authProvider {
@@ -35,8 +38,9 @@ class ProfileManager with ChangeNotifier {
   /// Handles authentication state changes.
   /// When the user changes (e.g., logs in), it triggers a profile fetch.
   void _onAuthChanged() {
-    if (_authProvider.isLoggedIn && _userProfile == null) {
-      fetchProfile(); // Fetch profile if logged in and no profile loaded yet
+    // Only fetch if logged in and profile is not already loaded OR if user changes
+    if (_authProvider.isLoggedIn && (_userProfile == null || _userProfile?.uid != _authProvider.user?.uid)) {
+      fetchProfile(); // Fetch profile if logged in and no profile loaded yet or user UID changed
     } else if (!_authProvider.isLoggedIn) {
       _userProfile = null; // Clear profile if logged out
       notifyListeners();
@@ -62,6 +66,7 @@ class ProfileManager with ChangeNotifier {
         // If no profile exists, create a new basic profile
         _userProfile = UserProfile(uid: user.uid, email: user.email);
         // Optionally save this basic profile to Firestore immediately
+        // This ensures a profile document exists for new users upon first fetch.
         await _firestore.collection('users').doc(user.uid).set(_userProfile!.toFirestore());
       }
       notifyListeners(); // Notify listeners that user profile has been updated
@@ -84,24 +89,34 @@ class ProfileManager with ChangeNotifier {
       throw Exception('User not logged in.');
     }
 
-    _setLoading(true); // Set loading state
+    _setLoading(true);
     try {
-      // Ensure the UID matches the current user
       profile.uid = user.uid;
-      // Use set with merge: true to update existing fields without overwriting the entire document
+
+      // Debug print
+      if (kDebugMode) {
+        print('Saving profile with data: ${profile.toFirestore()}');
+      }
+
       await _firestore.collection('users').doc(user.uid).set(
         profile.toFirestore(),
         SetOptions(merge: true),
       );
-      _userProfile = profile; // Update the local profile
-      notifyListeners(); // Notify listeners of the save
+
+      _userProfile = profile;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('Profile saved successfully');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('Error saving user profile: $e');
+        print('Error saving profile: $e');
+        print('Stack trace: ${e}');
       }
-      throw Exception('Failed to save profile: $e'); // Re-throw to handle in UI
+      throw Exception('Failed to save profile: $e');
     } finally {
-      _setLoading(false); // Clear loading state
+      _setLoading(false);
     }
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'auth_provider.dart';
+import '../providers/auth_provider.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -23,7 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      await Provider.of<AuthProvider>(context, listen: false).register(
+      await Provider.of<CustomAuthProvider>(context, listen: false).register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _nameController.text.trim(),
@@ -54,7 +54,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = Provider.of<CustomAuthProvider>(context);
 
     return Scaffold(
       body: Container(

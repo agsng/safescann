@@ -1,11 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:safescann/pages/MyHomePage.dart';
-import 'package:safescann/pages/auth_provider.dart';
-import 'package:safescann/pages/login_page.dart';
-import 'package:safescann/pages/register_page.dart';
-import 'package:safescann/provider/profile_manager.dart';
+import 'package:safescann/home/MyHomePage.dart';
+import 'package:safescann/providers/auth_provider.dart';
+import 'package:safescann/auth/login_page.dart';
+import 'package:safescann/auth/register_page.dart';
+import 'package:safescann/providers/profile_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,11 +47,11 @@ void main() async {
     MultiProvider( // Use MultiProvider for multiple ChangeNotifierProviders
       providers: [
         ChangeNotifierProvider(
-          create: (context) => AuthProvider()..initialize(),
+          create: (context) => CustomAuthProvider()..initialize(),
         ),
         // ChangeNotifierProxyProvider is used when a provider depends on another provider
-        ChangeNotifierProxyProvider<AuthProvider, ProfileManager>(
-          create: (context) => ProfileManager(authProvider: Provider.of<AuthProvider>(context, listen: false)),
+        ChangeNotifierProxyProvider<CustomAuthProvider, ProfileManager>(
+          create: (context) => ProfileManager(authProvider: Provider.of<CustomAuthProvider>(context, listen: false)),
           update: (context, auth, previousProfileManager) {
             // Return a new ProfileManager if AuthProvider changes.
             // Re-creating the ProfileManager here ensures it always has the latest AuthProvider instance.
@@ -133,7 +133,7 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = Provider.of<CustomAuthProvider>(context);
 
     // Wait for Firebase to emit auth state
     if (auth.isLoading) {

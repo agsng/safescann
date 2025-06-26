@@ -31,9 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
   provider: ^6.0.5
-  firebase_core: ^2.15.1       # Firebase Core
-  cloud_firestore: ^4.9.1      # Firestore Database
-  firebase_auth: ^4.11.1       # Firebase Authentication
+  firebase_core: ^2.15.1
+  cloud_firestore: ^4.9.1
+  firebase_auth: ^4.16.1
   image_picker: ^1.0.4
   intl: ^0.18.1
 
