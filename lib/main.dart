@@ -1,10 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:safescann/home/MyHomePage.dart';
+import 'package:safescann/pages/home/MyHomePage.dart';
 import 'package:safescann/providers/auth_provider.dart';
-import 'package:safescann/auth/login_page.dart';
-import 'package:safescann/auth/register_page.dart';
+import 'package:safescann/pages/auth/login_page.dart';
+import 'package:safescann/pages/auth/register_page.dart';
 import 'package:safescann/providers/profile_manager.dart';
 
 void main() async {

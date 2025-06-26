@@ -1,50 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
+import 'register_page.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  _LoginPageState createState() => _LoginPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
-  Future<void> _register() async {
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    // Validate the form fields using the form key
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      await Provider.of<CustomAuthProvider>(context, listen: false).register(
+      // Attempt to log in using the AuthProvider
+      await Provider.of<CustomAuthProvider>(context, listen: false).login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
-        _nameController.text.trim(),
       );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration successful!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) Navigator.pop(context);
     } catch (e) {
+      // Ensure the widget is still mounted before showing a SnackBar
       if (!mounted) return;
+      // Show an error message if login fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Registration failed: ${e.toString()}'),
+          content: Text('Login failed: ${e.toString()}'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -54,10 +49,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Access the AuthProvider to check loading state
     final auth = Provider.of<CustomAuthProvider>(context);
 
     return Scaffold(
       body: Container(
+        // Apply a linear gradient background for a visually appealing look
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -66,48 +63,37 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ),
         child: Center(
+          // Allow scrolling if content overflows
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Card(
-              elevation: 8,
+              elevation: 8, // Add shadow to the card
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16), // Rounded corners for the card
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Form(
-                  key: _formKey,
+                  key: _formKey, // Associate the form key
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.min, // Make column take minimum space
                     children: [
+                      // Welcome text
                       const Text(
-                        'Create Account',
+                        'Welcome Back',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 16),
+                      // Subtitle text
                       const Text(
-                        'Fill in your details to register',
+                        'Login to your account',
                         style: TextStyle(fontSize: 16),
                       ),
                       const SizedBox(height: 24),
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                      // Email input field
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(
@@ -120,6 +106,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
+                          // Simple email format validation
                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
@@ -127,12 +114,14 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                       ),
                       const SizedBox(height: 16),
+                      // Password input field
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
                           labelText: 'Password',
                           border: const OutlineInputBorder(),
                           prefixIcon: const Icon(Icons.lock),
+                          // Toggle password visibility
                           suffixIcon: IconButton(
                             icon: Icon(
                                 _obscurePassword ? Icons.visibility_off : Icons.visibility),
@@ -144,7 +133,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscureText: _obscurePassword,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter a password';
+                            return 'Please enter your password';
                           }
                           if (value.length < 6) {
                             return 'Password must be at least 6 characters';
@@ -152,51 +141,41 @@ class _RegisterPageState extends State<RegisterPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _confirmPasswordController,
-                        decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.lock),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                                _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                            onPressed: () {
-                              setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-                            },
-                          ),
-                        ),
-                        obscureText: _obscureConfirmPassword,
-                        validator: (value) {
-                          if (value != _passwordController.text) {
-                            return 'Passwords do not match';
-                          }
-                          return null;
-                        },
-                      ),
                       const SizedBox(height: 24),
+                      // Login button
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: auth.isLoading ? null : _register,
+                          onPressed: auth.isLoading ? null : _login,
+                          // Define button style
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            // Set button background color
                             backgroundColor: Colors.blue,
+                            // Set text color for the button for better contrast
+                            foregroundColor: Colors.white,
                           ),
+                          // Define button content based on loading state
                           child: auth.isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text('REGISTER', style: TextStyle(fontSize: 16)),
+                              : const Text('LOGIN', style: TextStyle(fontSize: 16)),
                         ),
                       ),
                       const SizedBox(height: 16),
+                      // Register navigation button
                       TextButton(
-                        onPressed: auth.isLoading ? null : () => Navigator.pop(context),
+                        onPressed: auth.isLoading
+                            ? null
+                            : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const RegisterPage()),
+                        ),
                         child: const Text(
-                          'Already have an account? Login',
-                          style: TextStyle(fontSize: 16, color: Colors.blue),
+                          'Don\'t have an account? Register',
+                          style: TextStyle(fontSize: 16, color: Colors.deepPurpleAccent),
                         ),
                       ),
                     ],
@@ -208,14 +187,5 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 }

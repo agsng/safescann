@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../profile/profile_page.dart';
-import '../providers/auth_provider.dart';
+import '../../profile/profile_page.dart';
+import '../../providers/auth_provider.dart';
+import '../../pages/vehicle_management_page.dart'; // Import the VehicleManagementPage
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -22,7 +23,7 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
-          // Profile Button
+          // Profile Button (can be removed if using drawer for profile management)
           IconButton(
             icon: const Icon(Icons.account_circle), // A common icon for profiles
             onPressed: () {
@@ -41,6 +42,49 @@ class _MyHomePageState extends State<MyHomePage> {
             },
           ),
         ],
+      ),
+      // Add the Drawer for the side menu
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              child: Text(
+                'Menu',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.car_rental),
+              title: const Text('Manage Vehicles'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const VehicleManagementPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Manage Profile'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                );
+              },
+            ),
+            // You can add more ListTile widgets for additional options here
+          ],
+        ),
       ),
       body: Center(
         child: Column(

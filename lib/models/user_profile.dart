@@ -1,25 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'emergency_contact.dart';
+// import 'vehicleModel.dart'; // No direct import of Vehicle model here, only IDs
 
-/// A models class to represent the user's profile data.
+/// A model class to represent the user's profile data.
 /// This helps in structuring data consistently for Firestore operations.
 class UserProfile {
   String? uid;
   String? fullName;
   String? email;
-  String? dateOfBirth; // Consider using DateTime for actual date objects
+  String? dateOfBirth;
   String? gender;
-  String? profilePhotoUrl; // URL for profile picture
+  String? profilePhotoUrl;
   String? primaryPhoneNumber;
-  String? alternatePhoneNumber;
-  List<EmergencyContact> emergencyContacts; // Changed to List<EmergencyContact>
-  String? vehicleNumberPlate;
-  String? vehicleType;
-  String? vehicleMakeModel;
-  String? vehicleColor;
-  String? insuranceProvider;
-  String? insurancePolicyNo;
+  // String? alternatePhoneNumber;
+  List<EmergencyContact> emergencyContacts;
+  Map<String, String> assignedVehicles; // Changed to Map<VehicleId, AssignedName>
   String? bloodGroup;
   String? knownAllergies;
   String? medicalConditions;
@@ -37,14 +32,9 @@ class UserProfile {
     this.gender,
     this.profilePhotoUrl,
     this.primaryPhoneNumber,
-    this.alternatePhoneNumber,
-    this.emergencyContacts = const [], // Initialize as empty list of EmergencyContact
-    this.vehicleNumberPlate,
-    this.vehicleType,
-    this.vehicleMakeModel,
-    this.vehicleColor,
-    this.insuranceProvider,
-    this.insurancePolicyNo,
+    // this.alternatePhoneNumber,
+    this.emergencyContacts = const [],
+    this.assignedVehicles = const {}, // Initialize as empty map
     this.bloodGroup,
     this.knownAllergies,
     this.medicalConditions,
@@ -66,18 +56,15 @@ class UserProfile {
       gender: data['gender'],
       profilePhotoUrl: data['profilePhotoUrl'],
       primaryPhoneNumber: data['primaryPhoneNumber'],
-      alternatePhoneNumber: data['alternatePhoneNumber'],
-      // Convert list of dynamic maps to list of EmergencyContact objects
+      // alternatePhoneNumber: data['alternatePhoneNumber'],
       emergencyContacts: (data['emergencyContacts'] as List<dynamic>?)
           ?.map((e) => EmergencyContact.fromMap(Map<String, dynamic>.from(e)))
           .toList() ??
           [],
-      vehicleNumberPlate: data['vehicleNumberPlate'],
-      vehicleType: data['vehicleType'],
-      vehicleMakeModel: data['vehicleMakeModel'],
-      vehicleColor: data['vehicleColor'],
-      insuranceProvider: data['insuranceProvider'],
-      insurancePolicyNo: data['insurancePolicyNo'],
+      // Parse assignedVehicles from Firestore map
+      assignedVehicles: (data['assignedVehicles'] as Map<String, dynamic>?)
+          ?.map((key, value) => MapEntry(key, value.toString())) ??
+          {},
       bloodGroup: data['bloodGroup'],
       knownAllergies: data['knownAllergies'],
       medicalConditions: data['medicalConditions'],
@@ -92,21 +79,15 @@ class UserProfile {
   /// Converts the UserProfile object into a Map for storing in Firestore.
   Map<String, dynamic> toFirestore() {
     return {
-      'uid': uid,
       'fullName': fullName,
       'email': email,
       'dateOfBirth': dateOfBirth,
       'gender': gender,
       'profilePhotoUrl': profilePhotoUrl,
       'primaryPhoneNumber': primaryPhoneNumber,
-      'alternatePhoneNumber': alternatePhoneNumber,
+      // 'alternatePhoneNumber': alternatePhoneNumber,
       'emergencyContacts': emergencyContacts.map((contact) => contact.toMap()).toList(),
-      'vehicleNumberPlate': vehicleNumberPlate,
-      'vehicleType': vehicleType,
-      'vehicleMakeModel': vehicleMakeModel,
-      'vehicleColor': vehicleColor,
-      'insuranceProvider': insuranceProvider,
-      'insurancePolicyNo': insurancePolicyNo,
+      'assignedVehicles': assignedVehicles, // Store the map of IDs and assigned names
       'bloodGroup': bloodGroup,
       'knownAllergies': knownAllergies,
       'medicalConditions': medicalConditions,
@@ -116,5 +97,47 @@ class UserProfile {
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
       'lastLogin': FieldValue.serverTimestamp(),
     };
+  }
+
+  /// Creates a new UserProfile instance with the provided parameters,
+  /// copying existing values if a parameter is not explicitly given.
+  UserProfile copyWith({
+    String? uid,
+    String? fullName,
+    String? email,
+    String? dateOfBirth,
+    String? gender,
+    String? profilePhotoUrl,
+    String? primaryPhoneNumber,
+    List<EmergencyContact>? emergencyContacts,
+    Map<String, String>? assignedVehicles,
+    String? bloodGroup,
+    String? knownAllergies,
+    String? medicalConditions,
+    String? medications,
+    String? homeAddress,
+    String? preferredHospital,
+    Timestamp? createdAt,
+    Timestamp? lastLogin,
+  }) {
+    return UserProfile(
+      uid: uid ?? this.uid,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+      primaryPhoneNumber: primaryPhoneNumber ?? this.primaryPhoneNumber,
+      emergencyContacts: emergencyContacts ?? this.emergencyContacts,
+      assignedVehicles: assignedVehicles ?? this.assignedVehicles,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      knownAllergies: knownAllergies ?? this.knownAllergies,
+      medicalConditions: medicalConditions ?? this.medicalConditions,
+      medications: medications ?? this.medications,
+      homeAddress: homeAddress ?? this.homeAddress,
+      preferredHospital: preferredHospital ?? this.preferredHospital,
+      createdAt: createdAt ?? this.createdAt,
+      lastLogin: lastLogin ?? this.lastLogin,
+    );
   }
 }
