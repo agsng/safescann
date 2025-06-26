@@ -353,10 +353,18 @@ class _ProfilePageState extends State<ProfilePage> {
                   'Emergency Contact ${index + 1}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                if (_isEditing && _ecNameControllers.length > 2)
+                if (_isEditing)
                   IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _removeEmergencyContact(index),
+                    icon: Icon(
+                      Icons.delete,
+                      color: _ecNameControllers.length <= 1 ? Colors.grey : Colors.red,
+                    ),
+                    onPressed: _ecNameControllers.length <= 1
+                        ? null
+                        : () => _removeEmergencyContact(index),
+                    tooltip: _ecNameControllers.length <= 1
+                        ? 'At least 1 contacts required'
+                        : 'Remove contact',
                   ),
               ],
             ),
