@@ -23,6 +23,7 @@ class ProfileManager with ChangeNotifier {
   UserProfile? get userProfile => _userProfile;
   List<Vehicle> get userVehicles => _userVehicles;
   bool get isLoading => _isLoading;
+  String? get currentUserId => _authProvider.user?.uid;
 
   /// Constructor for ProfileManager.
   /// Takes optional FirebaseAuth, FirebaseFirestore, and required CustomAuthProvider instances.
@@ -164,16 +165,19 @@ class ProfileManager with ChangeNotifier {
 
     _setLoading(true);
     try {
-      final docRef = await _firestore.collection('vehicles').add(vehicle.toFirestore());
-      vehicle.id = docRef.id; // Assign the newly generated ID to the model
+      // Add vehicle to 'vehicles' collection
+      final vehicleDocRef = await _firestore.collection('vehicles').add(vehicle.toFirestore());
+      vehicle.id = vehicleDocRef.id; // Assign the newly generated ID to the model
 
-      // Add to local list, but the assignedVehicles map in UserProfile
-      // will be updated when saveProfile() is called from the UI.
+      // Add QR metadata to 'QRMetadata' collection
+      await _firestore.collection('QRMetadata').doc(vehicle.qrCodeUuid).set(vehicle.toQRMetadataFirestore());
+
+      // Add to local list
       _userVehicles.add(vehicle);
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Error adding vehicle: $e');
+        print('Error adding vehicle or QR metadata: $e');
       }
       throw Exception('Failed to add vehicle: $e');
     } finally {
@@ -181,7 +185,7 @@ class ProfileManager with ChangeNotifier {
     }
   }
 
-  /// Updates an existing vehicle in the 'vehicles' collection.
+  /// Updates an existing vehicle in the 'vehicles' collection and potentially its QRMetadata.
   Future<void> updateVehicle(Vehicle vehicle) async {
     final user = _authProvider.user;
     if (user == null || vehicle.id == null) {
@@ -193,9 +197,18 @@ class ProfileManager with ChangeNotifier {
 
     _setLoading(true);
     try {
+      // Update vehicle in 'vehicles' collection
       await _firestore.collection('vehicles').doc(vehicle.id).set(
         vehicle.toFirestore(),
         SetOptions(merge: true), // Use merge to update specific fields
+      );
+
+      // Update QR metadata in 'QRMetadata' collection
+      // If qrCodeUuid can change, you might need to delete the old one and create a new one.
+      // For simplicity, we assume qrCodeUuid is stable after creation.
+      await _firestore.collection('QRMetadata').doc(vehicle.qrCodeUuid).set(
+        vehicle.toQRMetadataFirestore(),
+        SetOptions(merge: true), // Use merge for QR metadata as well
       );
 
       // Update local list
@@ -206,7 +219,7 @@ class ProfileManager with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Error updating vehicle: $e');
+        print('Error updating vehicle or QR metadata: $e');
       }
       throw Exception('Failed to update vehicle: $e');
     } finally {
@@ -214,8 +227,7 @@ class ProfileManager with ChangeNotifier {
     }
   }
 
-  /// Deletes a vehicle from the 'vehicles' collection.
-  /// The vehicle's ID will be removed from the user's assignedVehicles map when saving the UserProfile.
+  /// Deletes a vehicle from the 'vehicles' collection and its associated QRMetadata.
   Future<void> deleteVehicle(String vehicleId) async {
     final user = _authProvider.user;
     if (user == null) {
@@ -224,17 +236,23 @@ class ProfileManager with ChangeNotifier {
 
     _setLoading(true);
     try {
-      // First, delete the vehicle document itself
+      // Find the vehicle to get its qrCodeUuid before deleting
+      final vehicleToDelete = _userVehicles.firstWhere((v) => v.id == vehicleId);
+
+      // Delete the vehicle document itself
       await _firestore.collection('vehicles').doc(vehicleId).delete();
 
-      // Remove from local list. The assignedVehicles map in UserProfile
-      // will be updated when saveProfile() is called from the UI, which
-      // will then reconcile the list of vehicle IDs.
+      // Delete the corresponding QR metadata
+      if (vehicleToDelete.qrCodeUuid.isNotEmpty) {
+        await _firestore.collection('QRMetadata').doc(vehicleToDelete.qrCodeUuid).delete();
+      }
+
+      // Remove from local list.
       _userVehicles.removeWhere((v) => v.id == vehicleId);
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Error deleting vehicle: $e');
+        print('Error deleting vehicle or QR metadata: $e');
       }
       throw Exception('Failed to delete vehicle: $e');
     } finally {

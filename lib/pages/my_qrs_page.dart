@@ -1,8 +1,8 @@
+// lib/my_qrs_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:safescann/providers/qr_code_provider.dart';
 import '../providers/profile_manager.dart'; // Import ProfileManager
-import '../models/vehicleModel.dart'; // Import Vehicle model
+import '../widgets/vehicle_qr_code.dart'; // Import VehicleQrCode widget
 
 class GetMyQrsPage extends StatefulWidget {
   const GetMyQrsPage({super.key});
@@ -15,8 +15,6 @@ class _GetMyQrsPageState extends State<GetMyQrsPage> {
   @override
   void initState() {
     super.initState();
-    // Fetch user profile and vehicles when the page initializes
-    // This ensures we have the latest vehicle data.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ProfileManager>(context, listen: false).fetchProfile();
     });
@@ -24,7 +22,6 @@ class _GetMyQrsPageState extends State<GetMyQrsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch the ProfileManager to react to changes in userVehicles or loading state
     final profileManager = context.watch<ProfileManager>();
 
     return Scaffold(
@@ -50,6 +47,28 @@ class _GetMyQrsPageState extends State<GetMyQrsPage> {
         itemCount: profileManager.userVehicles.length,
         itemBuilder: (context, index) {
           final vehicle = profileManager.userVehicles[index];
+
+          // Only check if qrCodeUuid is available
+          if (vehicle.qrCodeUuid == null || vehicle.qrCodeUuid!.isEmpty) {
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 10.0),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                  child: Text(
+                    'QR Code cannot be generated (QR Code UUID missing).',
+                    style: TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            );
+          }
+
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 10.0),
             elevation: 4,
@@ -75,30 +94,21 @@ class _GetMyQrsPageState extends State<GetMyQrsPage> {
                     style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   const SizedBox(height: 15),
-                  // Display QR Code
-                  if (vehicle.id != null && vehicle.id!.isNotEmpty)
-                    Center(
-                      child: QrCodeGenerator.buildQrCode(
-                        data: vehicle.id!, // Use vehicle ID as QR data
-                        size: 200.0, // Set a smaller size for list view
-                      ),
-                    )
-                  else
-                    const Center(
-                      child: Text(
-                        'QR Code cannot be generated (Vehicle ID missing).',
-                        style: TextStyle(color: Colors.red),
-                      ),
+                  // Display QR Code by instantiating VehicleQrCode widget
+                  Center(
+                    child: VehicleQrCode(
+                      qrCodeIdentifier: vehicle.qrCodeUuid!, // Pass only qrCodeUuid
                     ),
+                  ),
                   const SizedBox(height: 20),
                   // Display "Order Now" Button
                   Center(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: Implement "Order Now" logic here
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Order Now for Vehicle ${vehicle.vehicleNumber}! (To be implemented)'),
+                            content: Text(
+                                'Order Now for Vehicle ${vehicle.vehicleNumber}! (To be implemented)'),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -108,7 +118,8 @@ class _GetMyQrsPageState extends State<GetMyQrsPage> {
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
                         backgroundColor: Colors.green, // Green for "Order Now"
-                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 25, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
