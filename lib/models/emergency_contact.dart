@@ -31,4 +31,11 @@ class EmergencyContact {
       'email': email,
     };
   }
+
+  Map<String, dynamic> toPublicMap() {
+    return {
+      'name': name?.split(" ")[0],
+      'relationship': relationship,
+    };
+  }
 }

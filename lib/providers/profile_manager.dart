@@ -1,102 +1,89 @@
+// In profile_manager.dart
+
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:collection/collection.dart'; // Ensure this import is present if using firstWhereOrNull
 
-// Ensure this import path is correct for your CustomAuthProvider
-import '../providers/auth_provider.dart'; // Assuming CustomAuthProvider is in this path
-import '../models/user_profile.dart'; // Import the updated UserProfile model
-import '../models/vehicleModel.dart'; // Import the Vehicle model
+import '../models/user_profile.dart';
+import '../models/vehicleModel.dart';
+import '../providers/auth_provider.dart';
+// The import below should be removed if it's importing itself, assuming this file *is* profile_manager.dart
+// import '../providers/profile_manager.dart';
 
-/// A class to manage user profile data, extending ChangeNotifier for state management.
-/// It interacts with Firebase Firestore to store and retrieve user profiles.
+
 class ProfileManager with ChangeNotifier {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  // Changed type from AuthProvider to CustomAuthProvider
-  final CustomAuthProvider _authProvider; // Reference to CustomAuthProvider
+  final CustomAuthProvider _authProvider;
 
-  UserProfile? _userProfile; // Stores the currently loaded user profile
-  List<Vehicle> _userVehicles = []; // Stores the list of vehicles associated with the user
-  bool _isLoading = false; // Indicates if an operation (fetch/save) is in progress
+  UserProfile? _userProfile;
+  List<Vehicle> _userVehicles = [];
+  bool _isLoading = false;
 
-  // Getters for accessing profile data and loading state
   UserProfile? get userProfile => _userProfile;
   List<Vehicle> get userVehicles => _userVehicles;
   bool get isLoading => _isLoading;
   String? get currentUserId => _authProvider.user?.uid;
 
-  /// Constructor for ProfileManager.
-  /// Takes optional FirebaseAuth, FirebaseFirestore, and required CustomAuthProvider instances.
   ProfileManager({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-    // Changed type from AuthProvider to CustomAuthProvider
     required CustomAuthProvider authProvider,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
         _authProvider = authProvider {
-    // Listen to auth state changes to automatically fetch profile when user logs in/out
     _authProvider.addListener(_onAuthChanged);
   }
 
-  /// Handles authentication state changes.
-  /// When the user changes (e.g., logs in), it triggers a profile fetch.
   void _onAuthChanged() {
-    // Only fetch if logged in and profile is not already loaded OR if user changes
     if (_authProvider.isLoggedIn && (_userProfile == null || _userProfile?.uid != _authProvider.user?.uid)) {
-      fetchProfile(); // Fetch profile if logged in and no profile loaded yet or user UID changed
-    } else if (!_authProvider.isLoggedIn) {
-      _userProfile = null; // Clear profile if logged out
-      _userVehicles = []; // Clear vehicles on logout as well
+      fetchProfile();
+    } else if (!(_authProvider.isLoggedIn)) {
+      _userProfile = null;
+      _userVehicles = [];
       notifyListeners();
     }
   }
 
-  /// Fetches the user profile from Firestore.
   Future<void> fetchProfile() async {
     final user = _authProvider.user;
     if (user == null) {
-      _userProfile = null; // No user logged in
+      _userProfile = null;
       _userVehicles = [];
       notifyListeners();
       return;
     }
 
-    _setLoading(true); // Set loading state
+    _setLoading(true);
     try {
       final docSnapshot = await _firestore.collection('users').doc(user.uid).get();
       if (docSnapshot.exists) {
-        // If profile exists, create UserProfile from Firestore data
         _userProfile = UserProfile.fromFirestore(docSnapshot);
       } else {
-        // If no profile exists, create a new basic profile
         _userProfile = UserProfile(uid: user.uid, email: user.email);
-        // Optionally save this basic profile to Firestore immediately
-        // This ensures a profile document exists for new users upon first fetch.
         await _firestore.collection('users').doc(user.uid).set(_userProfile!.toFirestore());
       }
 
-      // After fetching UserProfile, fetch the associated Vehicles
       await _fetchUserVehicles(user.uid);
 
-      notifyListeners(); // Notify listeners that user profile and vehicles have been updated
+      notifyListeners();
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching user profile or vehicles: $e');
       }
-      // Consider throwing an error or showing a message to the user
-      _userProfile = null; // Clear profile on error
+      _userProfile = null;
       _userVehicles = [];
       notifyListeners();
     } finally {
-      _setLoading(false); // Clear loading state
+      _setLoading(false);
     }
   }
 
-  /// Fetches vehicles owned by a specific user.
   Future<void> _fetchUserVehicles(String userId) async {
     try {
-      // Query the 'vehicles' collection for vehicles owned by this user
       final querySnapshot = await _firestore
           .collection('vehicles')
           .where('ownerUserId', isEqualTo: userId)
@@ -109,12 +96,11 @@ class ProfileManager with ChangeNotifier {
       if (kDebugMode) {
         print('Error fetching user vehicles: $e');
       }
-      _userVehicles = []; // Clear vehicles on error
+      _userVehicles = [];
     }
   }
 
   /// Saves the updated user profile to Firestore.
-  /// Note: Vehicle objects themselves are managed by addVehicle, updateVehicle, deleteVehicle.
   /// This method updates the UserProfile document, including the `assignedVehicles` map.
   Future<void> saveProfile(UserProfile profile) async {
     final user = _authProvider.user;
@@ -124,27 +110,51 @@ class ProfileManager with ChangeNotifier {
 
     _setLoading(true);
     try {
-      profile.uid = user.uid; // Ensure the UID matches the current user
+      profile.uid = user.uid;
 
       if (kDebugMode) {
-        print('Saving profile with data: ${profile.toFirestore()}');
+        print('ProfileManager: Calling saveProfile for user ${user.uid}');
+        print('ProfileManager: assignedVehicles in saveProfile: ${profile.assignedVehicles}');
+        print('ProfileManager: Full profile data to save: ${profile.toFirestore()}');
       }
 
+      // Prepare data for general profile fields, excluding 'assignedVehicles'
+      // This allows 'assignedVehicles' to be handled separately for a full overwrite.
+      Map<String, dynamic> generalProfileData = profile.toFirestore();
+      generalProfileData.remove('assignedVehicles'); // Temporarily remove from this map
+
+      // Perform the general profile update with merge: true
+      // This will merge other top-level fields, leaving 'assignedVehicles' untouched for now.
       await _firestore.collection('users').doc(user.uid).set(
-        profile.toFirestore(),
-        SetOptions(merge: true), // Use merge to update existing fields without overwriting
+        generalProfileData,
+        SetOptions(merge: true),
       );
 
-      _userProfile = profile; // Update the local profile
-      notifyListeners();
+      // Now, perform a separate update specifically for 'assignedVehicles'.
+      // This `update()` call will completely replace the 'assignedVehicles' map
+      // with the new `profile.assignedVehicles` map, correctly handling deletions.
+      await _firestore.collection('users').doc(user.uid).update(
+        {'assignedVehicles': profile.assignedVehicles},
+      );
+
+
+      _userProfile = profile; // Update the local profile immediately after initiating the write
+      notifyListeners(); // Notify listeners that user profile has been updated locally
+
+      // Update public vehicle details for all *current* user vehicles
+      for (final vehicle in _userVehicles) {
+        if (vehicle.ownerUserId == user.uid) {
+          await _updatePublicVehicleDetails(vehicle.qrCodeUuid, profile, vehicle);
+        }
+      }
 
       if (kDebugMode) {
-        print('Profile saved successfully');
+        print('ProfileManager: Profile saved successfully to Firestore and local state updated.');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error saving profile: $e');
-        print('Stack trace: $e');
+        print('ProfileManager: Error saving profile: $e');
+        print('ProfileManager: Stack trace: $e');
       }
       throw Exception('Failed to save profile: $e');
     } finally {
@@ -152,8 +162,6 @@ class ProfileManager with ChangeNotifier {
     }
   }
 
-  /// Adds a new vehicle to the 'vehicles' collection.
-  /// The vehicle's ID will be automatically added to the user's assignedVehicles map when saving the UserProfile.
   Future<void> addVehicle(Vehicle vehicle) async {
     final user = _authProvider.user;
     if (user == null) {
@@ -165,15 +173,19 @@ class ProfileManager with ChangeNotifier {
 
     _setLoading(true);
     try {
-      // Add vehicle to 'vehicles' collection
       final vehicleDocRef = await _firestore.collection('vehicles').add(vehicle.toFirestore());
-      vehicle.id = vehicleDocRef.id; // Assign the newly generated ID to the model
+      vehicle.id = vehicleDocRef.id;
 
-      // Add QR metadata to 'QRMetadata' collection
       await _firestore.collection('QRMetadata').doc(vehicle.qrCodeUuid).set(vehicle.toQRMetadataFirestore());
 
-      // Add to local list
+      if (_userProfile != null) {
+        // Public details will be updated when the profile is saved via _saveVehicles
+        // or ensure this is handled consistently for new vehicles if needed immediately.
+        await _updatePublicVehicleDetails(vehicle.qrCodeUuid, _userProfile!, vehicle);
+      }
+
       _userVehicles.add(vehicle);
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -185,7 +197,6 @@ class ProfileManager with ChangeNotifier {
     }
   }
 
-  /// Updates an existing vehicle in the 'vehicles' collection and potentially its QRMetadata.
   Future<void> updateVehicle(Vehicle vehicle) async {
     final user = _authProvider.user;
     if (user == null || vehicle.id == null) {
@@ -197,21 +208,34 @@ class ProfileManager with ChangeNotifier {
 
     _setLoading(true);
     try {
-      // Update vehicle in 'vehicles' collection
       await _firestore.collection('vehicles').doc(vehicle.id).set(
         vehicle.toFirestore(),
-        SetOptions(merge: true), // Use merge to update specific fields
+        SetOptions(merge: true),
       );
 
-      // Update QR metadata in 'QRMetadata' collection
-      // If qrCodeUuid can change, you might need to delete the old one and create a new one.
-      // For simplicity, we assume qrCodeUuid is stable after creation.
-      await _firestore.collection('QRMetadata').doc(vehicle.qrCodeUuid).set(
-        vehicle.toQRMetadataFirestore(),
-        SetOptions(merge: true), // Use merge for QR metadata as well
-      );
+      final qrDoc = await _firestore.collection('QRMetadata').doc(vehicle.qrCodeUuid).get();
 
-      // Update local list
+      bool shouldUpdateQRMetadata = true;
+      if (qrDoc.exists) {
+        final data = qrDoc.data();
+        if (data != null &&
+            data['vehicleId'] == vehicle.id &&
+            data['ownerUserId'] == vehicle.ownerUserId) {
+          shouldUpdateQRMetadata = false;
+        }
+      }
+
+      if (shouldUpdateQRMetadata) {
+        await _firestore.collection('QRMetadata').doc(vehicle.qrCodeUuid).set(
+          vehicle.toQRMetadataFirestore(),
+          SetOptions(merge: true),
+        );
+      }
+
+      if (_userProfile != null) {
+        await _updatePublicVehicleDetails(vehicle.qrCodeUuid, _userProfile!, vehicle);
+      }
+
       int index = _userVehicles.indexWhere((v) => v.id == vehicle.id);
       if (index != -1) {
         _userVehicles[index] = vehicle;
@@ -227,32 +251,54 @@ class ProfileManager with ChangeNotifier {
     }
   }
 
-  /// Deletes a vehicle from the 'vehicles' collection and its associated QRMetadata.
+  /// Deletes a vehicle from the 'vehicles' collection and its associated QRMetadata,
+  /// PublicVehicleDetails documents. It also ensures the local `_userVehicles` list is updated.
+  /// **Important:** The `assignedVehicles` map in UserProfile is now updated
+  /// exclusively by the `_saveVehicles` method in `VehicleManagementPage`.
   Future<void> deleteVehicle(String vehicleId) async {
     final user = _authProvider.user;
     if (user == null) {
+      if (kDebugMode) print('Delete failed: User not logged in.');
       throw Exception('User not logged in.');
     }
 
     _setLoading(true);
     try {
-      // Find the vehicle to get its qrCodeUuid before deleting
-      final vehicleToDelete = _userVehicles.firstWhere((v) => v.id == vehicleId);
+      // Find the vehicle in the local list to get its QR UUID for associated document deletion
+      final vehicleToDelete = _userVehicles.firstWhereOrNull((v) => v.id == vehicleId);
 
-      // Delete the vehicle document itself
-      await _firestore.collection('vehicles').doc(vehicleId).delete();
+      // Only attempt to delete vehicle document and associated metadata
+      // if the vehicle was found in the local list (meaning it existed in Firestore).
+      if (vehicleToDelete != null) {
+        final vehicleDocRef = _firestore.collection('vehicles').doc(vehicleId);
+        final qrMetadataDocRef = _firestore.collection('QRMetadata').doc(vehicleToDelete.qrCodeUuid);
+        final publicDetailsDocRef = _firestore.collection('PublicVehicleDetails').doc(vehicleToDelete.qrCodeUuid);
 
-      // Delete the corresponding QR metadata
-      if (vehicleToDelete.qrCodeUuid.isNotEmpty) {
-        await _firestore.collection('QRMetadata').doc(vehicleToDelete.qrCodeUuid).delete();
+        // Batch delete for atomicity (optional but good practice for related documents)
+        WriteBatch batch = _firestore.batch();
+        batch.delete(vehicleDocRef);
+        batch.delete(qrMetadataDocRef);
+        batch.delete(publicDetailsDocRef);
+        await batch.commit();
+
+        if (kDebugMode) print('ProfileManager: Vehicle and associated data deleted from Firestore.');
+      } else {
+        if (kDebugMode) {
+          print('ProfileManager: Vehicle with ID $vehicleId not found in local _userVehicles list. '
+              'Skipping Firestore document deletions (vehicles, QRMetadata, PublicVehicleDetails).');
+        }
       }
 
-      // Remove from local list.
+      // Remove from local _userVehicles list.
       _userVehicles.removeWhere((v) => v.id == vehicleId);
-      notifyListeners();
+      if (kDebugMode) print('ProfileManager: Vehicle ID $vehicleId removed from local _userVehicles list.');
+
+      notifyListeners(); // Notify listeners about changes in _userVehicles
+
     } catch (e) {
       if (kDebugMode) {
-        print('Error deleting vehicle or QR metadata: $e');
+        print('ProfileManager: Error deleting vehicle or associated data: $e');
+        rethrow; // Re-throw the exception so the UI can catch it and show a SnackBar.
       }
       throw Exception('Failed to delete vehicle: $e');
     } finally {
@@ -260,6 +306,32 @@ class ProfileManager with ChangeNotifier {
     }
   }
 
+  /// Creates or updates a document in the PublicVehicleDetails collection.
+  /// This combines public info from UserProfile and Vehicle.
+  Future<void> _updatePublicVehicleDetails(String qrCodeUuid, UserProfile profile, Vehicle vehicle) async {
+    if (qrCodeUuid.isEmpty) {
+      if (kDebugMode) print("QR Code UUID is empty, cannot update public details.");
+      return;
+    }
+
+    final publicData = {
+      'qrCodeUuid': qrCodeUuid,
+      'ownerPublicInfo': profile.toPublicMap(), // Assuming these are commented out
+      'vehiclePublicInfo': vehicle.toPublicMap(), // Assuming these are commented out
+      'lastUpdatedPublicly': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await _firestore.collection('PublicVehicleDetails').doc(qrCodeUuid).set(
+        publicData,
+        SetOptions(merge: true),
+      );
+      if (kDebugMode) print("PublicVehicleDetails updated for QR: $qrCodeUuid");
+    } catch (e) {
+      if (kDebugMode) print("Error updating PublicVehicleDetails for QR $qrCodeUuid: $e");
+      // Consider logging to a remote error tracking system
+    }
+  }
 
   /// Helper method to update the loading state and notify listeners.
   void _setLoading(bool loading) {

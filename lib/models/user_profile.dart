@@ -140,4 +140,16 @@ class UserProfile {
       lastLogin: lastLogin ?? this.lastLogin,
     );
   }
+
+  Map<String, dynamic> toPublicMap() {
+    return {
+      'fullName': fullName?.split(" ")[0],
+      'emergencyContacts': emergencyContacts.map((contact) => contact.toPublicMap()).toList(),
+      'bloodGroup': bloodGroup,
+      'knownAllergies': knownAllergies,
+      'medicalConditions': medicalConditions,
+      'medications': medications,
+      'preferredHospital': preferredHospital,
+    };
+  }
 }

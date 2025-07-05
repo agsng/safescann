@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:collection/collection.dart'; // Import for firstWhereOrNull extension
 import '../models/user_profile.dart';
 import '../models/vehicleModel.dart';
 import '../providers/auth_provider.dart';
@@ -30,8 +32,9 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
   final List<TextEditingController> _vehicleNotesControllers = [];
   final List<TextEditingController> _vehicleAssignedNameControllers = [];
 
-  // To hold existing vehicle IDs
-  final Map<String, String> _localAssignedVehicles = {}; // VehicleId -> AssignedName
+  // To hold existing vehicle IDs, maintaining the order of the UI list.
+  // This is crucial for correctly identifying which vehicle is being edited/deleted.
+  final List<String?> _vehicleIdsInUIOrder = [];
 
   @override
   void initState() {
@@ -67,7 +70,7 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
     _vehicleDriverUserIdControllers.clear();
     _vehicleNotesControllers.clear();
     _vehicleAssignedNameControllers.clear();
-    _localAssignedVehicles.clear();
+    _vehicleIdsInUIOrder.clear(); // Clear this tracking list
   }
 
   Future<void> _fetchVehicles() async {
@@ -77,8 +80,7 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
   }
 
   void _populateVehicleControllers(UserProfile? profile, List<Vehicle> vehicles) {
-    _clearAndDisposeVehicleControllers();
-    _localAssignedVehicles.clear();
+    _clearAndDisposeVehicleControllers(); // Clear existing controllers and IDs
 
     if (profile == null) return;
 
@@ -92,17 +94,20 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
       _vehicleInsurancePolicyNoControllers.add(TextEditingController(text: vehicle.insurancePolicyNo));
       _vehicleDriverUserIdControllers.add(TextEditingController(text: vehicle.driverUserId));
       _vehicleNotesControllers.add(TextEditingController(text: vehicle.notes));
+      // Get assigned name from profile.assignedVehicles map using vehicle.id
       final assignedName = profile.assignedVehicles[vehicle.id] ?? '';
       _vehicleAssignedNameControllers.add(TextEditingController(text: assignedName));
 
-      if (vehicle.id != null) {
-        _localAssignedVehicles[vehicle.id!] = assignedName;
-      }
+      _vehicleIdsInUIOrder.add(vehicle.id); // Store the actual vehicle ID
     }
-    // Ensure at least one empty vehicle field if no vehicles
-    if (_vehicleNumberControllers.isEmpty) {
+    // Ensure at least one empty vehicle field if no vehicles exist or if we're editing and want to add one
+    if (_vehicleNumberControllers.isEmpty && _isEditingVehicles) {
+      _addVehicleField();
+    } else if (_vehicleNumberControllers.isEmpty && !(context.read<ProfileManager>().isLoading)) {
+      // If no vehicles and not loading, add one empty field for initial input
       _addVehicleField();
     }
+    setState(() {}); // Trigger rebuild after populating
   }
 
   void _addVehicleField() {
@@ -117,33 +122,28 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
       _vehicleDriverUserIdControllers.add(TextEditingController());
       _vehicleNotesControllers.add(TextEditingController());
       _vehicleAssignedNameControllers.add(TextEditingController());
+      _vehicleIdsInUIOrder.add(null); // Add null for a new vehicle (no ID yet)
     });
   }
 
   Future<void> _removeVehicleField(int index) async {
     final profileManager = context.read<ProfileManager>();
-    final vehicleNumberToRemove = _vehicleNumberControllers[index].text;
-    String? vehicleIdToRemove;
+    final vehicleIdToRemove = _vehicleIdsInUIOrder[index]; // Get the ID directly
 
-    for (var entry in _localAssignedVehicles.entries) {
-      if (profileManager.userVehicles.any((v) => v.id == entry.key && v.vehicleNumber == vehicleNumberToRemove)) {
-        vehicleIdToRemove = entry.key;
-        break;
-      }
-    }
+    // Dispose controllers first
+    _vehicleNumberControllers[index].dispose();
+    _vehicleTypeControllers[index].dispose();
+    _vehicleBrandControllers[index].dispose();
+    _vehicleModelControllers[index].dispose();
+    _vehicleColorControllers[index].dispose();
+    _vehicleInsuranceProviderControllers[index].dispose();
+    _vehicleInsurancePolicyNoControllers[index].dispose();
+    _vehicleDriverUserIdControllers[index].dispose();
+    _vehicleNotesControllers[index].dispose();
+    _vehicleAssignedNameControllers[index].dispose();
 
+    // Remove from local lists
     setState(() {
-      _vehicleNumberControllers[index].dispose();
-      _vehicleTypeControllers[index].dispose();
-      _vehicleBrandControllers[index].dispose();
-      _vehicleModelControllers[index].dispose();
-      _vehicleColorControllers[index].dispose();
-      _vehicleInsuranceProviderControllers[index].dispose();
-      _vehicleInsurancePolicyNoControllers[index].dispose();
-      _vehicleDriverUserIdControllers[index].dispose();
-      _vehicleNotesControllers[index].dispose();
-      _vehicleAssignedNameControllers[index].dispose();
-
       _vehicleNumberControllers.removeAt(index);
       _vehicleTypeControllers.removeAt(index);
       _vehicleBrandControllers.removeAt(index);
@@ -154,15 +154,15 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
       _vehicleDriverUserIdControllers.removeAt(index);
       _vehicleNotesControllers.removeAt(index);
       _vehicleAssignedNameControllers.removeAt(index);
-
-      if (vehicleIdToRemove != null) {
-        _localAssignedVehicles.remove(vehicleIdToRemove);
-      }
+      _vehicleIdsInUIOrder.removeAt(index); // Remove the ID from tracking list
     });
 
     if (vehicleIdToRemove != null) {
       try {
+        // Call the ProfileManager's delete method which handles Firestore deletions
+        // This will delete the vehicle document and its associated data.
         await profileManager.deleteVehicle(vehicleIdToRemove);
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Vehicle removed successfully!'), backgroundColor: Colors.green),
@@ -172,9 +172,21 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to remove vehicle: $e'), backgroundColor: Colors.red),
         );
+        if (kDebugMode) {
+          print('Error attempting to delete vehicle document in _removeVehicleField: $e');
+        }
       }
+    } else {
+      // This case is for a newly added vehicle that hasn't been saved yet.
+      // It just needs to be removed from the UI.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New vehicle removed from UI.'), backgroundColor: Colors.orange),
+      );
     }
+    // The assignedVehicles map update will happen when _saveVehicles is called.
   }
+
 
   Future<void> _saveVehicles() async {
     if (!_formKey.currentState!.validate()) {
@@ -188,7 +200,7 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
     }
 
     final profileManager = context.read<ProfileManager>();
-    final authProvider = context.read<CustomAuthProvider>(); // Corrected reference
+    final authProvider = context.read<CustomAuthProvider>();
 
     try {
       final ownerUserId = authProvider.user?.uid;
@@ -196,13 +208,16 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
         throw Exception("User not logged in. Cannot save vehicles without an owner.");
       }
 
-      Map<String, String> newAssignedVehicles = {};
+      Map<String, String> finalAssignedVehiclesMap = {}; // This will hold the complete, final map for UserProfile
+      Set<String> currentUIVehicleIds = {}; // Use a Set for efficient lookup of IDs currently in UI
 
+      // --- Step 1: Process Adds and Updates, building the final map ---
       for (int i = 0; i < _vehicleNumberControllers.length; i++) {
         final vehicleNumber = _vehicleNumberControllers[i].text.trim();
         final assignedName = _vehicleAssignedNameControllers[i].text.trim();
+        String? vehicleId = _vehicleIdsInUIOrder[i]; // Get the ID for this row (might be null for new)
 
-        if (vehicleNumber.isNotEmpty) {
+        if (vehicleNumber.isNotEmpty) { // Only process if vehicle number is not empty
           final type = _vehicleTypeControllers[i].text.trim();
           final brand = _vehicleBrandControllers[i].text.trim();
           final model = _vehicleModelControllers[i].text.trim();
@@ -212,51 +227,74 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
           final driverUserId = _vehicleDriverUserIdControllers[i].text.trim();
           final notes = _vehicleNotesControllers[i].text.trim();
 
-          String? existingVehicleId;
-          for (var entry in _localAssignedVehicles.entries) {
-            if (profileManager.userVehicles.any((v) => v.id == entry.key && v.vehicleNumber == vehicleNumber)) {
-              existingVehicleId = entry.key;
-              break;
-            }
-          }
+          Vehicle vehicleToProcess;
 
-          Vehicle vehicle = Vehicle(
-            id: existingVehicleId,
-            vehicleNumber: vehicleNumber,
-            type: type.isEmpty ? null : type,
-            brand: brand.isEmpty ? null : brand,
-            model: model.isEmpty ? null : model,
-            color: color.isEmpty ? null : color,
-            insuranceProvider: insuranceProvider.isEmpty ? null : insuranceProvider,
-            insurancePolicyNo: insurancePolicyNo.isEmpty ? null : insurancePolicyNo,
-            ownerUserId: ownerUserId,
-            driverUserId: driverUserId.isEmpty ? null : driverUserId,
-            isDriverRegistered: driverUserId.isNotEmpty,
-            notes: notes.isEmpty ? null : notes,
-          );
+          if (vehicleId != null) {
+            // This is an existing vehicle, find it in userVehicles to update
+            vehicleToProcess = profileManager.userVehicles.firstWhereOrNull(
+                  (v) => v.id == vehicleId,
+            ) ?? Vehicle(id: vehicleId, vehicleNumber: '', ownerUserId: ownerUserId); // Fallback for safety
 
-          if (existingVehicleId != null) {
-            await profileManager.updateVehicle(vehicle);
+            // Update properties of the existing vehicle object
+            vehicleToProcess = vehicleToProcess.copyWith(
+              vehicleNumber: vehicleNumber,
+              type: type.isEmpty ? null : type,
+              brand: brand.isEmpty ? null : brand,
+              model: model.isEmpty ? null : model,
+              color: color.isEmpty ? null : color,
+              insuranceProvider: insuranceProvider.isEmpty ? null : insuranceProvider,
+              insurancePolicyNo: insurancePolicyNo.isEmpty ? null : insurancePolicyNo,
+              ownerUserId: ownerUserId,
+              driverUserId: driverUserId.isEmpty ? null : driverUserId,
+              isDriverRegistered: driverUserId.isNotEmpty,
+              notes: notes.isEmpty ? null : notes,
+            );
+            await profileManager.updateVehicle(vehicleToProcess);
           } else {
-            await profileManager.addVehicle(vehicle);
+            // This is a new vehicle
+            vehicleToProcess = Vehicle(
+              vehicleNumber: vehicleNumber,
+              type: type.isEmpty ? null : type,
+              brand: brand.isEmpty ? null : brand,
+              model: model.isEmpty ? null : model,
+              color: color.isEmpty ? null : color,
+              insuranceProvider: insuranceProvider.isEmpty ? null : insuranceProvider,
+              insurancePolicyNo: insurancePolicyNo.isEmpty ? null : insurancePolicyNo,
+              ownerUserId: ownerUserId,
+              driverUserId: driverUserId.isEmpty ? null : driverUserId,
+              isDriverRegistered: driverUserId.isNotEmpty,
+              notes: notes.isEmpty ? null : notes,
+            );
+            await profileManager.addVehicle(vehicleToProcess); // This will set vehicleToProcess.id and qrCodeUuid
+            _vehicleIdsInUIOrder[i] = vehicleToProcess.id; // Update the ID in our local tracking list
           }
-          if (vehicle.id != null) {
-            newAssignedVehicles[vehicle.id!] = assignedName;
+
+          // After add/update, vehicleToProcess.id should be non-null
+          if (vehicleToProcess.id != null) {
+            finalAssignedVehiclesMap[vehicleToProcess.id!] = assignedName;
+            currentUIVehicleIds.add(vehicleToProcess.id!); // Add to list of current UI IDs
           }
         }
       }
 
-      // Identify and delete vehicles that were removed from the UI
-      List<String> vehiclesToDelete = _localAssignedVehicles.keys.where((id) => !newAssignedVehicles.containsKey(id)).toList();
-      for (String id in vehiclesToDelete) {
+      // --- Step 2: Identify and delete vehicles that were removed from the UI ---
+      // Compare the original assigned vehicles from the profileManager with the ones currently processed in the UI
+      List<String> vehicleIdsToDelete = profileManager.userProfile!.assignedVehicles.keys.where(
+              (id) => !currentUIVehicleIds.contains(id)
+      ).toList();
+
+      for (String id in vehicleIdsToDelete) {
+        // Call deleteVehicle for any IDs that are no longer in the UI's assigned list.
+        // The ProfileManager.deleteVehicle will delete the vehicle document and its associated data.
         await profileManager.deleteVehicle(id);
       }
 
-      // Update the user profile with the new assigned vehicles map
+      // --- Step 3: Update the user profile with the new assigned vehicles map ---
+      // This single save operation will correctly overwrite the entire assignedVehicles map in Firestore.
       UserProfile updatedProfile = profileManager.userProfile!.copyWith(
-        assignedVehicles: newAssignedVehicles,
+        assignedVehicles: finalAssignedVehiclesMap, // Use the map that reflects all adds, updates, and removals
       );
-      await profileManager.saveProfile(updatedProfile);
+      await profileManager.saveProfile(updatedProfile); // This will now correctly overwrite the assignedVehicles map
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -264,13 +302,17 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
       );
       setState(() {
         _isEditingVehicles = false;
-        _fetchVehicles(); // Re-fetch to ensure UI reflects latest state
+        // Re-fetch to ensure UI reflects latest state including new IDs and deletions
+        _fetchVehicles();
       });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save vehicles: $e'), backgroundColor: Colors.red),
       );
+      if (kDebugMode) {
+        print('Error in _saveVehicles: $e');
+      }
     }
   }
 
@@ -280,9 +322,21 @@ class _VehicleManagementPageState extends State<VehicleManagementPage> {
     final profileManager = context.watch<ProfileManager>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isEditingVehicles) {
-        _populateVehicleControllers(profileManager.userProfile, profileManager.userVehicles);
-      } else if (profileManager.userProfile == null && !profileManager.isLoading) {
+      // Only re-populate when not editing, or when profile is null and not loading (initial state)
+      if (!_isEditingVehicles && !(profileManager.isLoading)) {
+        // Check if current controllers match the actual vehicles.
+        // This prevents unnecessary repopulation if state is already correct.
+        // A simple length check and checking if any ID is null (meaning a new unsaved vehicle)
+        // or if the first vehicle number doesn't match, can indicate a need to repopulate.
+        if (_vehicleNumberControllers.length != profileManager.userVehicles.length ||
+            _vehicleIdsInUIOrder.any((id) => id == null) ||
+            (profileManager.userVehicles.isNotEmpty && _vehicleNumberControllers.isNotEmpty &&
+                _vehicleNumberControllers[0].text != profileManager.userVehicles[0].vehicleNumber)
+        ) {
+          _populateVehicleControllers(profileManager.userProfile, profileManager.userVehicles);
+        }
+      } else if (profileManager.userProfile == null && !(profileManager.isLoading) && _vehicleNumberControllers.isNotEmpty) {
+        // If logged out or no profile, clear controllers
         _populateVehicleControllers(null, []);
       }
     });
