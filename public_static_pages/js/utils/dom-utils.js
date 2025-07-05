@@ -4,6 +4,7 @@
 const messageDiv = document.getElementById('message');
 const qrSection = document.getElementById('qr-section');
 const qrCodeUuidSpan = document.getElementById('qr-code-uuid');
+const qrCodeImage = document.getElementById('qr-code-image'); // Get the QR code image element
 const vehicleInfoSection = document.getElementById('vehicle-info-section');
 const vehicleDetailsList = document.getElementById('vehicle-details-list');
 const ownerInfoSection = document.getElementById('owner-info-section');
@@ -11,15 +12,20 @@ const ownerDetailsList = document.getElementById('owner-details-list');
 const emergencyContactsSection = document.getElementById('emergency-contacts-section');
 const emergencyContactsList = document.getElementById('emergency-contacts-list');
 const makeCallButton = document.getElementById('make-call-button');
+const makeCallECButton = document.getElementById('make-call-ec-button');
 const sosButton = document.getElementById('sos-button');
 
 // Modal Elements
 const modal = document.getElementById('myModal');
-const closeButton = document.getElementsByClassName('close-button')[0];
+const closeButton = document.getElementsByClassName('close-button')[0]; // The 'x' close button inside modal
 const modalMessage = document.getElementById('modal-message');
 const modalActions = document.getElementById('modal-actions');
 
-// Function to show custom modal
+/**
+ * Function to show custom modal using Tailwind's 'hidden' class.
+ * @param {string} message The message to display in the modal.
+ * @param {Array<Object>} [actions=[]] Optional array of action buttons for the modal.
+ */
 function showModal(message, actions = []) {
     modalMessage.textContent = message;
     modalActions.innerHTML = ''; // Clear previous actions
@@ -27,6 +33,7 @@ function showModal(message, actions = []) {
     actions.forEach(action => {
         const button = document.createElement('button');
         button.textContent = action.text;
+        // Apply Tailwind classes directly for modal action buttons
         button.className = 'px-4 py-2 rounded-lg font-semibold transition-colors duration-200';
         if (action.type === 'primary') {
             button.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
@@ -37,25 +44,29 @@ function showModal(message, actions = []) {
         }
         button.onclick = () => {
             action.handler();
-            modal.style.display = 'none'; // Close modal after action
+            modal.classList.add('hidden'); // Close modal after action, use hidden class
         };
         modalActions.appendChild(button);
     });
 
-    modal.style.display = 'flex'; // Show modal
+    modal.classList.remove('hidden'); // Show modal by removing 'hidden' class
 }
 
-// Close modal when close button is clicked
-closeButton.onclick = function() {
-    modal.style.display = 'none';
+// Event listeners for closing modal are best handled in contact-actions.js for modularity,
+// but included simple checks here for robustness in case.
+if (closeButton) {
+    closeButton.onclick = function() {
+        if (modal) modal.classList.add('hidden');
+    };
+}
+if (modal) {
+    window.onclick = function(event) {
+        if (event.target === modal) {
+            modal.classList.add('hidden');
+        }
+    };
 }
 
-// Close modal when clicking outside of the modal content
-window.onclick = function(event) {
-    if (event.target == modal) {
-        modal.style.display = 'none';
-    }
-}
 
 /**
  * Extracts the QR Code UUID from the URL, supporting both query parameters (?id=...)
@@ -85,8 +96,8 @@ function getQrCodeUuidFromUrl() {
 }
 
 /**
- * Populates a details list with key-value pairs.
- * @param {HTMLElement} listElement The UL element to populate.
+ * Populates a details list with key-value pairs using Tailwind classes.
+ * @param {HTMLElement} listElement The HTML element (e.g., div) to populate.
  * @param {Object} data The object containing the details.
  * @param {string[]} [excludeKeys=[]] Optional array of keys to exclude from display.
  */
@@ -101,10 +112,11 @@ function populateDetailsList(listElement, data, excludeKeys = []) {
             const value = data[key];
             if (value !== null && value !== undefined && value !== '') {
                 const divItem = document.createElement('div');
-                divItem.className = 'detail-item';
+                // *** IMPORTANT: Changed custom classes to direct Tailwind for styling ***
+                divItem.className = 'flex justify-between py-2 border-b border-dashed border-gray-200 last:border-b-0';
                 divItem.innerHTML = `
-                    <span class="detail-label">${formatKey(key)}:</span>
-                    <span class="detail-value">${value}</span>
+                    <span class="font-semibold text-gray-600">${formatKey(key)}:</span>
+                    <span class="text-gray-700 text-right">${value}</span>
                 `;
                 listElement.appendChild(divItem);
             }
@@ -129,6 +141,7 @@ export {
     messageDiv,
     qrSection,
     qrCodeUuidSpan,
+    qrCodeImage, // *** EXPORTED QR CODE IMAGE ***
     vehicleInfoSection,
     vehicleDetailsList,
     ownerInfoSection,
@@ -136,7 +149,12 @@ export {
     emergencyContactsSection,
     emergencyContactsList,
     makeCallButton,
+    makeCallECButton,
     sosButton,
+    modal, // *** EXPORTED MODAL ***
+    closeButton, // *** EXPORTED CLOSE BUTTON ***
+    modalMessage, // *** EXPORTED MODAL MESSAGE ***
+    modalActions, // *** EXPORTED MODAL ACTIONS ***
     showModal,
     getQrCodeUuidFromUrl,
     populateDetailsList,

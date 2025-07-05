@@ -1,0 +1,56 @@
+/*
+  This file contains only custom CSS rules that are not easily
+  achievable with direct Tailwind CSS utility classes, or for
+  organizational preferences.
+
+  Most styling for this project is now handled directly via
+  Tailwind classes in the HTML.
+*/
+
+/* --- Font Family --- */
+/* It's good practice to declare the primary font here if you're using Google Fonts or custom fonts. */
+/* Tailwind's default font stack is good, but if 'Inter' is crucial, declare it. */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* --- Base Layout Overrides (if necessary, but mostly handled by Tailwind in HTML) --- */
+/*
+  The following were previously in your custom CSS but are now largely
+  handled by Tailwind classes in index.html:
+
+  .container
+  .section-title
+  .detail-item
+  .detail-label
+  .detail-value
+  .button-group
+  .action-button (including make-call-button, sos-button, etc.)
+  .modal
+  .modal-content
+  .close-button
+
+  Unless you have very specific, complex custom styling for these elements
+  that cannot be expressed efficiently with Tailwind utility classes,
+  you do not need to re-add them here.
+*/
+
+/*
+  Example: If you wanted a unique shadow or animation not covered by Tailwind's defaults,
+  you would define it here:
+*/
+/*
+.custom-shadow-effect {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+*/
+
+/*
+  Example: If you had a custom component structure that was very repetitive
+  with Tailwind classes, you might create a reusable class here using @apply (with PostCSS/Tailwind CLI):
+*/
+/*
+.my-custom-card {
+    @apply bg-white rounded-lg shadow-md p-4;
+}
+*/

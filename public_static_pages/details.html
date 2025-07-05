@@ -1,204 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-    
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SafeScann Vehicle Details</title>
-    <!-- Tailwind CSS CDN for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter font from Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 1rem;
-            box-sizing: border-box;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            width: 100%;
-            background-color: #ffffff;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1a202c;
-            margin-bottom: 1rem;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 0.5rem;
-        }
-        .detail-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px dashed #e2e8f0;
-        }
-        .detail-item:last-child {
-            border-bottom: none;
-        }
-        .detail-label {
-            font-weight: 600;
-            color: #4a5568;
-        }
-        .detail-value {
-            color: #2d3748;
-            text-align: right;
-        }
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-        }
-        .action-button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            transition: all 0.2s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .action-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-        }
-        .make-call-button {
-            background-color: #4CAF50; /* Green */
-            color: white;
-        }
-        .make-call-button:hover {
-            background-color: #45a049;
-        }
-        .sos-button {
-            background-color: #f44336; /* Red */
-            color: white;
-        }
-        .sos-button:hover {
-            background-color: #da190b;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1000; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            width: 80%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-<div class="container">
-    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Vehicle Details</h1>
 
-    <!-- Loading / Error Message -->
-    <div id="message" class="text-center text-lg text-gray-600">Loading details...</div>
+<body class="font-inter bg-gray-100 flex justify-center items-center min-h-screen p-8 box-border text-gray-800">
+<div class="container w-full max-w-lg min-w-xs bg-white rounded-2xl shadow-xl p-8 text-center flex flex-col gap-6 mx-auto relative md:max-w-xl md:p-10">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Welcome to SafeScann</h1>
+    <p class="text-xl text-gray-700 mb-6">Let us help you</p>
 
-    <!-- QR Code Section -->
-    <div id="qr-section" class="hidden">
-        <div class="section-title">QR Code Information</div>
-        <img id="qr-code-image" src="https://placehold.co/150x150/E0E0E0/FFFFFF?text=QR" alt="QR Code" class="mx-auto my-4 rounded-lg shadow-md">
-        <p class="text-xl font-bold text-gray-800">QR Code: <span id="qr-code-uuid"></span></p>
-    </div>
-
-    <!-- Vehicle Information Section -->
-    <div id="vehicle-info-section" class="hidden">
-        <div class="section-title">Vehicle Information</div>
-        <div id="vehicle-details-list" class="text-left">
-            <!-- Vehicle details will be populated here -->
-        </div>
-    </div>
-
-    <!-- Owner Information Section -->
-    <div id="owner-info-section" class="hidden">
-        <div class="section-title">Owner Information</div>
-        <div id="owner-details-list" class="text-left">
-            <!-- Owner details will be populated here -->
-        </div>
-    </div>
-
-    <!-- Emergency Contacts Section -->
-    <div id="emergency-contacts-section" class="hidden">
-        <div class="section-title">Emergency Contacts</div>
-        <div id="emergency-contacts-list" class="text-left">
-            <!-- Emergency contacts will be populated here -->
-        </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="button-group mt-4">
-        <button id="make-call-button" class="action-button make-call-button hidden">
+    <div class="flex flex-wrap justify-center gap-4 mt-4 mb-6">
+        <button id="make-call-button" class="action-button flex-1 min-w-[150px] sm:flex-auto sm:max-w-[calc(50%_-_0.5rem)] md:flex-auto md:max-w-[calc(50%_-_0.5rem)] py-3 px-6 rounded-xl font-semibold transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md hover:translate-y-[-2px] hover:shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.854 1.442L8.75 7.5c.243.856-.113 1.77-.93 2.324l-.005.003-.004.002a6.734 6.734 0 0 0 4.908 4.908l.003-.004.002-.005c.554-.817 1.468-1.173 2.324-.93l3.056 1.186c.856.243 1.442 1.003 1.442 1.854V19.5a3 3 0 0 1-3 3H15c-1.173 0-2.23-.553-2.916-1.413A11.908 11.908 0 0 1 8.012 10.5c-.86-.686-1.413-1.743-1.413-2.916V4.5a3 3 0 0 1 3-3H4.5a3 3 0 0 1-3 3Z" clip-rule="evenodd" />
+                <path fill-rule="evenodd"
+                      d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.854 1.442L8.75 7.5c.243.856-.113 1.77-.93 2.324l-.005.003-.004.002a6.734 6 0 0 0 4.908 4.908l.003-.004.002-.005c.554-.817 1.468-1.173 2.324-.93l3.056 1.186c.856.243 1.442 1.003 1.442 1.854V19.5a3 3 0 0 1-3 3H15c-1.173 0-2.23-.553-2.916-1.413A11.908 11.908 0 0 1 8.012 10.5c-.86-.686-1.413-1.743-1.413-2.916V4.5a3 3 0 0 1 3-3H4.5a3 3 0 0 1-3 3Z"
+                      clip-rule="evenodd" />
             </svg>
             Call Primary Contact
         </button>
-        <button id="sos-button" class="action-button sos-button hidden">
+        <button id="make-call-ec-button" class="action-button flex-1 min-w-[150px] sm:flex-auto sm:max-w-[calc(50%_-_0.5rem)] md:flex-auto md:max-w-[calc(50%_-_0.5rem)] py-3 px-6 rounded-xl font-semibold transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md hover:translate-y-[-2px] hover:shadow-lg bg-sky-600 hover:bg-sky-700 text-white">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clip-rule="evenodd" />
+                <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.854 1.442L8.75 7.5c.243.856-.113 1.77-.93 2.324l-.005.003-.004.002a6.734 6.734 0 0 0 4.908 4.908l.003-.004.002-.005c.554-.817 1.468-1.173 2.324-.93l3.056 1.186c.856.243 1.442 1.003 1.442 1.854V19.5a3 3 0 0 1-3 3H15c-1.173 0-2.23-.553-2.916-1.413A11.908 11.908 0 0 1 8.012 10.5c-.86-.686-1.413-1.743-1.413-2.916V4.5a3 3 0 0 1 3-3H4.5a3 3 0 0 1-3 3Z" clip-rule="evenodd" />
+            </svg>
+            Call Emergency Contact
+        </button>
+        <button id="sos-button" class="action-button flex-1 min-w-[150px] sm:flex-auto sm:max-w-[calc(50%_-_0.5rem)] md:flex-auto md:max-w-[calc(50%_-_0.5rem)] py-3 px-6 rounded-xl font-semibold transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md hover:translate-y-[-2px] hover:shadow-lg bg-rose-600 hover:bg-rose-700 text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                <path fill-rule="evenodd"
+                      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                      clip-rule="evenodd" />
             </svg>
             SOS
         </button>
     </div>
+
+    <div id="message" class="text-center text-lg text-gray-600">Loading details...</div>
+
+    <div id="qr-section" class="hidden">
+        <div class="section-title text-2xl font-bold text-gray-900 mb-4 border-b-2 border-gray-200 pb-2">Vehicle ID</div>
+        <img id="qr-code-image" src="https://placehold.co/150x150/E0E0E0/FFFFFF?text=QR" alt="QR Code"
+             class="mx-auto my-4 rounded-lg shadow-md">
+        <p class="text-xl font-bold text-gray-800">QR Code: <span id="qr-code-uuid"></span></p>
+    </div>
+
+    <div id="owner-info-section" class="hidden">
+        <div class="section-title text-2xl font-bold text-gray-900 mb-4 border-b-2 border-gray-200 pb-2">Owner Information</div>
+        <div id="owner-details-list" class="text-left">
+        </div>
+    </div>
+
+    <div id="emergency-contacts-section" class="hidden">
+        <div class="section-title text-2xl font-bold text-gray-900 mb-4 border-b-2 border-gray-200 pb-2">Emergency Contacts</div>
+        <div id="emergency-contacts-list" class="text-left">
+        </div>
+    </div>
+
+    <div id="vehicle-info-section" class="hidden">
+        <div class="section-title text-2xl font-bold text-gray-900 mb-4 border-b-2 border-gray-200 pb-2">Other Vehicle Information</div>
+        <div id="vehicle-details-list" class="text-left">
+        </div>
+    </div>
+
 </div>
 
-<!-- The Modal -->
-<div id="myModal" class="modal">
-    <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <p id="modal-message" class="text-lg font-medium text-gray-800"></p>
-        <div id="modal-actions" class="mt-4 flex justify-center gap-4">
-            <!-- Action buttons will be inserted here -->
+<div id="myModal" class="modal fixed inset-0 z-50 flex justify-center items-center bg-black bg-opacity-40 hidden">
+    <div class="modal-content bg-white p-8 rounded-xl shadow-lg w-11/12 max-w-md text-center">
+        <span class="close-button float-right text-gray-500 text-3xl font-bold leading-none cursor-pointer hover:text-black">&times;</span>
+        <p id="modal-message" class="text-lg font-medium text-gray-800 mt-4 mb-4"></p>
+        <div id="modal-actions" class="mt-6 flex justify-center gap-4">
         </div>
     </div>
 </div>
 
-<!-- Main JavaScript module -->
-<script type="module" src="/js/main.js"></script> <!-- CHANGED: Added leading slash -->
+<script type="module" src="/js/main.js"></script>
 </body>
+
 </html>

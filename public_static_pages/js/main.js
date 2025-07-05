@@ -5,6 +5,7 @@ import {
     messageDiv,
     qrSection,
     qrCodeUuidSpan,
+    qrCodeImage, // *** IMPORTED QR CODE IMAGE ***
     vehicleInfoSection,
     vehicleDetailsList,
     ownerInfoSection,
@@ -24,6 +25,12 @@ function displayVehicleDetails(data) {
 
     // QR Code Section
     qrCodeUuidSpan.textContent = data.qrCodeUuid || 'N/A';
+    if (data.qrCodeImageUrl) { // Assuming qrCodeImageUrl comes with data
+        qrCodeImage.src = data.qrCodeImageUrl;
+    } else {
+        // Fallback or ensure default placeholder is shown if no image URL
+        qrCodeImage.src = "https://placehold.co/150x150/E0E0E0/FFFFFF?text=QR";
+    }
     qrSection.classList.remove('hidden');
 
     // Vehicle Information
@@ -38,7 +45,7 @@ function displayVehicleDetails(data) {
         populateDetailsList(ownerDetailsList, data.ownerPublicInfo, ['emergencyContacts']);
         ownerInfoSection.classList.remove('hidden');
 
-        // Set contact info for action buttons
+        // Set contact info for action buttons (this function handles button visibility)
         setContactInfo(data.ownerPublicInfo.primaryPhoneNumber, data.ownerPublicInfo.emergencyContacts);
     }
 
@@ -48,13 +55,20 @@ function displayVehicleDetails(data) {
         emergencyContactsList.innerHTML = ''; // Clear previous content
         emergencyContacts.forEach((contact, index) => {
             const contactDiv = document.createElement('div');
-            contactDiv.className = 'border border-gray-200 rounded-md p-3 mb-2 bg-gray-50';
+            // Use Tailwind classes directly for emergency contact list items
+            contactDiv.className = 'flex justify-between items-center py-2 border-b border-dashed border-gray-200 last:border-b-0';
             contactDiv.innerHTML = `
-                <p><span class="font-semibold">Contact ${index + 1}:</span></p>
-                <div class="detail-item"><span class="detail-label">Name:</span> <span class="detail-value">${contact.name || 'N/A'}</span></div>
-                <div class="detail-item"><span class="detail-label">Relationship:</span> <span class="detail-value">${contact.relationship || 'N/A'}</span></div>
-                <div class="detail-item"><span class="detail-label">Phone:</span> <span class="detail-value">${contact.phone || 'N/A'}</span></div>
-                <div class="detail-item"><span class="detail-label">Email:</span> <span class="detail-value">${contact.email || 'N/A'}</span></div>
+                <div class="flex-grow text-left">
+                    <span class="font-semibold text-gray-700">${contact.name || 'N/A'}</span>
+                    <p class="text-sm text-gray-500">${contact.relationship || 'N/A'}</p>
+                </div>
+                ${contact.phone ? `
+                    <a href="tel:${contact.phone}" class="flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-0.5 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.854 1.442L8.75 7.5c.243.856-.113 1.77-.93 2.324l-.005.003-.004.002a6.734 6.734 0 0 0 4.908 4.908l.003-.004.002-.005c.554-.817 1.468-1.173 2.324-.93l3.056 1.186c.856.243 1.442 1.003 1.442 1.854V19.5a3 3 0 0 1-3 3H15c-1.173 0-2.23-.553-2.916-1.413A11.908 11.908 0 0 1 8.012 10.5c-.86-.686-1.413-1.743-1.413-2.916V4.5a3 3 0 0 1 3-3H4.5a3 3 0 0 1-3 3Z" clip-rule="evenodd" />
+                        </svg>
+                        Call
+                    </a>` : ''}
             `;
             emergencyContactsList.appendChild(contactDiv);
         });
@@ -69,9 +83,15 @@ function displayVehicleDetails(data) {
 document.addEventListener('DOMContentLoaded', async () => {
     const qrCodeUuid = getQrCodeUuidFromUrl();
     if (qrCodeUuid) {
+        // This relies on your fetchPublicVehicleDetails from firestore-api.js to work correctly.
+        // Ensure it returns an object with qrCodeUuid, vehiclePublicInfo, ownerPublicInfo (including emergencyContacts)
         const data = await fetchPublicVehicleDetails(qrCodeUuid);
         if (data) {
             displayVehicleDetails(data);
+        } else {
+            messageDiv.textContent = 'Vehicle details not found for the provided QR Code ID.';
+            messageDiv.classList.remove('hidden');
+            messageDiv.classList.add('text-red-600');
         }
     } else {
         messageDiv.textContent = 'QR Code ID not found in URL. Please scan a valid QR code or use a direct link with ID.';
