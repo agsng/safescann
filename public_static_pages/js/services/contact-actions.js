@@ -8,7 +8,7 @@ let emergencyContacts = [];
 /**
  * Sets the contact information for the action buttons.
  * This function should be called after fetching public vehicle details.
- * It no longer controls button visibility based on initial data.
+ * It NO LONGER controls button visibility; buttons are assumed to be always visible from HTML.
  * @param {string} primaryPhone The owner's primary phone number.
  * @param {Array<Object>} contacts An array of emergency contact objects.
  */
@@ -16,11 +16,8 @@ export function setContactInfo(primaryPhone, contacts) {
     ownerPrimaryPhoneNumber = primaryPhone || '';
     emergencyContacts = contacts || [];
 
-    // Removed the logic to add/remove 'hidden' class here.
-    // Buttons are now assumed to be always visible from HTML.
-
-    // SOS button might always be visible, or based on another condition
-    // sosButton.classList.remove('hidden'); // Assuming SOS is always available - this line can stay or be removed if 'hidden' is gone from HTML
+    // Removed all logic here that adds/removes 'hidden' class from buttons.
+    // Buttons are now assumed to be always visible from the details.html file.
 }
 
 // Event Listeners for Buttons
@@ -82,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => { // Ensure DOM is loaded be
                     actions.push({ text: 'Call SOS Contact', type: 'danger', handler: () => window.location.href = `tel:${firstContactPhone}` });
                 }
             } else {
-                sosMessage += '\n\nNo emergency contacts configured for immediate call.'; // Updated message
+                sosMessage += '\n\nNo emergency contacts configured.';
             }
 
             actions.push({ text: 'Close', type: 'default', handler: () => {} });
