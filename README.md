@@ -1,16 +1,20 @@
-# safescann
+IF made chnages on to public stsatic pages:
+No need to run "flutter Web build"
 
-A new Flutter project.
+firebase deploy --only hosting:safescann-public-static 
 
-## Getting Started
+# Firebase Hosting Deployment Guide
 
-This project is a starting point for a Flutter application.
+## 🔧 Prerequisites
+- Firebase CLI (`npm install -g firebase-tools`)
+- Flutter SDK (for web builds)
+- Authenticated with Firebase (`firebase login`)
 
-A few resources to get you started if this is your first Flutter project:
+## 🚀 Deployment Commands
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 1. Full Clean & Deploy (Recommended)
+```bash
+# Clean build and deploy everything
+flutter clean && \
+flutter build web --release --web-renderer canvaskit && \
+firebase deploy --only hosting

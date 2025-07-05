@@ -7,35 +7,45 @@ import 'package:safescann/pages/auth/login_page.dart';
 import 'package:safescann/pages/auth/register_page.dart';
 import 'package:safescann/providers/profile_manager.dart';
 
+import 'firebase_config.dart'; // Ensure this path is correct
+
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter widgets are initialized
 
   // Error boundary for Flutter framework errors
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint(details.exceptionAsString());
+    debugPrint('Flutter Error caught: ${details.exceptionAsString()}'); // Added more specific debug print
   };
 
   // Initialize Firebase with enhanced error handling
   try {
     // Check if Firebase app is already initialized to prevent duplicate-app error
     if (Firebase.apps.isEmpty) {
+      print('Attempting to initialize Firebase...'); // Debug print
+
+      final firebaseOptions = getPlatformFirebaseOptions();
+      print('Options retrieved for current platform: $firebaseOptions'); // Debug print: Check if options are null or contain values
+
+      if (firebaseOptions == null) {
+        // This explicitly throws if options are null, which might happen on unsupported platforms
+        throw Exception('FirebaseOptions are null for the current platform. Cannot initialize Firebase.');
+      }
+
       await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          // Add your Firebase config here
-          apiKey: "AIzaSyCSEFjpARjtSmNv76nmdgLYfXmTMQiTv34",
-          appId: "1:220626158058:android:5b51118351cbd7eb433293",
-          messagingSenderId: "220626158058",
-          projectId: "safescann-aa466",
-        ),
+        options: firebaseOptions,
       );
+      print('Firebase initialized successfully!'); // Debug print
+    } else {
+      print('Firebase already initialized. Skipping.'); // Debug print
     }
   } catch (e) {
+    print('Firebase initialization failed: ${e.toString()}'); // Debug print
     runApp(
       MaterialApp(
         home: Scaffold(
           body: Center(
-            child: Text('Failed to initialize Firebase: ${e.toString()}'),
+            child: Text('Failed to initialize Firebase: ${e.toString()}\nCheck console for details.'),
           ),
         ),
       ),
