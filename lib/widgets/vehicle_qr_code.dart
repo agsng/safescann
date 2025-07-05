@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 class VehicleQrCode extends StatelessWidget {
   final String qrCodeIdentifier; // The unique identifier for the QR code (vehicle.qrCodeUuid)
 
-  static const String _firebaseHostingBaseUrl = 'https://YOUR_FIREBASE_HOSTING_URL.web.app';
+  static const String _firebaseHostingBaseUrl = 'https://safescann-aa466.web.app';
 
   const VehicleQrCode({
     super.key,
@@ -14,7 +14,7 @@ class VehicleQrCode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String qrDataUrl = '$_firebaseHostingBaseUrl/details/$qrCodeIdentifier';
+    final String qrDataUrl = '$_firebaseHostingBaseUrl///details/$qrCodeIdentifier';
 
     return LayoutBuilder(
       builder: (context, constraints) {

@@ -1,0 +1,34 @@
+{
+  "hosting": [
+    {
+      "target": "safescann-flutter-web",
+      "public": "build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "safescann-public-static",
+      "public": "public_static_pages",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/details/:qrCodeIdentifier",
+          "destination": "/details.html"
+        }
+      ]
+    }
+  ]
+}
